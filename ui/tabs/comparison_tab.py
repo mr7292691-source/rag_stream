@@ -281,6 +281,7 @@ def _display_comparison_results(settings: dict):
         st.markdown("**Metric**")
         st.markdown("---")
         for label in ["🎯 **Accuracy**", "📊 **Field Coverage**", "⚠️ **Hallucination**", 
+                      "🎯 **Precision**", "📈 **Recall**", "⭐ **F1-Score**",
                       "🤖 **LLM Tokens**", "🔢 **Embedding Tokens**", "📊 **Total Tokens**",
                       "⏱️ **Total Time**", "📞 **API Calls**"]:
             st.markdown(label)
@@ -293,6 +294,12 @@ def _display_comparison_results(settings: dict):
         st.markdown(f"{zs_summary['field_coverage']}%")
         halluc_color = get_metric_color(100 - zs_summary["avg_hallucination"], (60, 80))
         st.markdown(f"{halluc_color} {zs_summary['avg_hallucination']}%")
+        prec_color = get_metric_color(zs_summary.get("precision", 0), (50, 70))
+        st.markdown(f"{prec_color} {zs_summary.get('precision', 0)}%")
+        rec_color = get_metric_color(zs_summary.get("recall", 0), (50, 70))
+        st.markdown(f"{rec_color} {zs_summary.get('recall', 0)}%")
+        f1_color = get_metric_color(zs_summary.get("f1_score", 0), (50, 70))
+        st.markdown(f"{f1_color} {zs_summary.get('f1_score', 0)}%")
         st.markdown(f"{zs_metrics.get('llm_total_tokens', 'N/A')} (in: {zs_metrics.get('llm_input_tokens', 0)}, out: {zs_metrics.get('llm_output_tokens', 0)})")
         st.markdown(f"{zs_metrics.get('embedding_tokens', 0)}")
         st.markdown(f"**{zs_metrics.get('total_tokens', 'N/A')}**")
@@ -307,6 +314,12 @@ def _display_comparison_results(settings: dict):
         st.markdown(f"{rag_summary['field_coverage']}%")
         halluc_color = get_metric_color(100 - rag_summary["avg_hallucination"], (60, 80))
         st.markdown(f"{halluc_color} {rag_summary['avg_hallucination']}%")
+        prec_color = get_metric_color(rag_summary.get("precision", 0), (50, 70))
+        st.markdown(f"{prec_color} {rag_summary.get('precision', 0)}%")
+        rec_color = get_metric_color(rag_summary.get("recall", 0), (50, 70))
+        st.markdown(f"{rec_color} {rag_summary.get('recall', 0)}%")
+        f1_color = get_metric_color(rag_summary.get("f1_score", 0), (50, 70))
+        st.markdown(f"{f1_color} {rag_summary.get('f1_score', 0)}%")
         st.markdown(f"{rag_metrics.get('llm_total_tokens', 'N/A')} (in: {rag_metrics.get('llm_input_tokens', 0)}, out: {rag_metrics.get('llm_output_tokens', 0)})")
         st.markdown(f"{rag_metrics.get('embedding_tokens', 0)}")
         st.markdown(f"**{rag_metrics.get('total_tokens', 'N/A')}**")
@@ -383,6 +396,33 @@ def _display_comparison_results(settings: dict):
         })
         st.bar_chart(chart_data.set_index("Method"))
     
+    # Additional charts for Precision, Recall, F1
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.markdown("**Precision & Recall**")
+        chart_data = pd.DataFrame({
+            "Metric": ["Precision", "Recall"] * 2,
+            "Method": ["Zero-Shot", "Zero-Shot", "RAG", "RAG"],
+            "Score": [
+                zs_summary.get("precision", 0), 
+                zs_summary.get("recall", 0),
+                rag_summary.get("precision", 0),
+                rag_summary.get("recall", 0)
+            ]
+        })
+        # Create a pivot table for grouped bar chart
+        pivot_data = chart_data.pivot(index="Metric", columns="Method", values="Score")
+        st.bar_chart(pivot_data)
+    
+    with col4:
+        st.markdown("**F1-Score Comparison**")
+        chart_data = pd.DataFrame({
+            "Method": ["Zero-Shot", "RAG"],
+            "F1-Score": [zs_summary.get("f1_score", 0), rag_summary.get("f1_score", 0)]
+        })
+        st.bar_chart(chart_data.set_index("Method"))
+    
     # Export Options
     st.markdown("---")
     st.markdown("#### 📥 Export Results")
@@ -427,6 +467,18 @@ def _display_comparison_results(settings: dict):
             "zero_shot": zs_export,
             "rag": rag_export,
             "winner": "RAG" if rag_score > zs_score else "Zero-Shot" if zs_score > rag_score else "Tie",
+            "metrics_summary": {
+                "zero_shot": {
+                    "precision": zs_summary.get("precision", 0),
+                    "recall": zs_summary.get("recall", 0),
+                    "f1_score": zs_summary.get("f1_score", 0)
+                },
+                "rag": {
+                    "precision": rag_summary.get("precision", 0),
+                    "recall": rag_summary.get("recall", 0),
+                    "f1_score": rag_summary.get("f1_score", 0)
+                }
+            },
             "timestamp": datetime.now().isoformat()
         }
         st.download_button(
