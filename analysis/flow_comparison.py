@@ -399,6 +399,20 @@ def compare_outputs(
     
     total_fields = len(master_output)
     
+    # Calculate Precision and Recall for Zero-shot
+    # Precision = TP / (TP + FP) = exact_matches / total_extracted
+    # Recall = TP / (TP + FN) = exact_matches / total_fields
+    zs_extracted_count = len([r for r in zero_shot_results if r["value"] not in ["N/A", "ERROR"]]) if zero_shot_results else 0
+    zs_precision = round((zs_correct / zs_extracted_count) * 100, 1) if zs_extracted_count > 0 else 0
+    zs_recall = round((zs_correct / total_fields) * 100, 1) if total_fields > 0 else 0
+    zs_f1 = round(2 * (zs_precision * zs_recall) / (zs_precision + zs_recall), 1) if (zs_precision + zs_recall) > 0 else 0
+    
+    # Calculate Precision and Recall for RAG
+    rag_extracted_count = len([r for r in rag_results if r["value"] not in ["N/A", "ERROR"]]) if rag_results else 0
+    rag_precision = round((rag_correct / rag_extracted_count) * 100, 1) if rag_extracted_count > 0 else 0
+    rag_recall = round((rag_correct / total_fields) * 100, 1) if total_fields > 0 else 0
+    rag_f1 = round(2 * (rag_precision * rag_recall) / (rag_precision + rag_recall), 1) if (rag_precision + rag_recall) > 0 else 0
+    
     # Summary metrics
     comparison["zero_shot_summary"] = {
         "accuracy": round((zs_correct / total_fields) * 100, 1) if total_fields > 0 else 0,
@@ -409,7 +423,10 @@ def compare_outputs(
         "avg_hallucination": round(zs_hallucination_total / total_fields, 1) if total_fields > 0 else 0,
         "field_coverage": round(
             len([r for r in zero_shot_results if r["value"] not in ["N/A", "ERROR"]]) / total_fields * 100, 1
-        ) if zero_shot_results and total_fields > 0 else 0
+        ) if zero_shot_results and total_fields > 0 else 0,
+        "precision": zs_precision,
+        "recall": zs_recall,
+        "f1_score": zs_f1
     }
     
     comparison["rag_summary"] = {
@@ -421,7 +438,10 @@ def compare_outputs(
         "avg_hallucination": round(rag_hallucination_total / total_fields, 1) if total_fields > 0 else 0,
         "field_coverage": round(
             len([r for r in rag_results if r["value"] not in ["N/A", "ERROR"]]) / total_fields * 100, 1
-        ) if rag_results and total_fields > 0 else 0
+        ) if rag_results and total_fields > 0 else 0,
+        "precision": rag_precision,
+        "recall": rag_recall,
+        "f1_score": rag_f1
     }
     
     return comparison
